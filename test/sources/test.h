@@ -3,4 +3,6 @@
 
 #include "gtest/gtest.h"
 
+#define private public
+
 #endif  // REGEX_FA_TEST_TEST_H

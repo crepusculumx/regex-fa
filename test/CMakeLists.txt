@@ -29,14 +29,13 @@ add_definitions(-DGTEST)
 
 include_directories(sources)
 
-file(GLOB TEST_SOURCES "sources/*.cpp")
+file(GLOB TEST_SOURCES "sources/*.cpp" "sources/fa-graph/*.cpp" "sources/dfa/*.cpp")
 foreach (ONE_TEST_SOURCE ${TEST_SOURCES})
     get_filename_component(ONE_TEST_NAME "${ONE_TEST_SOURCE}" NAME)
     string(REPLACE ".cpp" "" ONE_TEST_NAME ${ONE_TEST_NAME})
     set(ONE_TEST_FULL_NAME "${PROJECT_NAME}-${ONE_TEST_NAME}")
 
     add_executable(${ONE_TEST_FULL_NAME} ${ONE_TEST_SOURCE})
-    message(${TEST_LIB_NAME})
     target_link_libraries(${ONE_TEST_FULL_NAME} gtest_main ${TEST_LIB_NAME})
     add_test(NAME ${ONE_TEST_NAME} COMMAND ${ONE_TEST_FULL_NAME})
 endforeach ()
