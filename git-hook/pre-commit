@@ -1,16 +1,17 @@
 #!/bin/bash
+# https://github.com/andrewseidl/githook-clang-format
 
 STYLE=$(git config --get hooks.clangformat.style)
 if [ -n "${STYLE}" ] ; then
-  STYLE_ARG="-style=${STYLE}"
+  STYLEARG="-style=${STYLE}"
 else
-  STYLE_ARG=""
+  STYLEARG=""
 fi
 
 format_file() {
   file="${1}"
   if [ -f $file ]; then
-    clang-format -i ${STYLE_ARG} ${1}
+    clang-format -i ${STYLEARG} ${1}
     git add ${1}
   fi
 }

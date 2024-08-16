@@ -1,20 +1,84 @@
 #ifndef REGEX_FA_DFA_HPP
 #define REGEX_FA_DFA_HPP
 
-#include <optional>
-#include <queue>
-#include <unordered_map>
-#include <utility>
-
 #include "fa-include.hpp"
 
 namespace regex_fa {
+
+struct FlatEdge {
+  StateId source{};
+  StateId target{};
+  Terminal terminal{};
+};
+
+struct FlatDfaTable {
+  std::vector<StateId> states{};
+  std::vector<FlatEdge> flatEdges{};
+};
+
+struct FlatDfa {
+  FlatDfaTable dfaTable{};
+  StateId s{};
+  std::vector<StateId> f{};
+};
+
+struct HopcroftSplit {
+  StateId splitId{};
+  std::vector<StateId> states{};
+
+  HopcroftSplit() = default;
+
+  HopcroftSplit(const StateId splitId, const States &states)
+      : splitId(splitId) {
+    for (auto stateId : states) {
+      this->states.emplace_back(stateId);
+    }
+  }
+};
+
+struct HopcroftFlatSplitTable {
+  std::vector<HopcroftSplit> splits{};
+};
+
+struct HopcroftSplitLog {
+  Terminal splitTerminal{};
+  HopcroftFlatSplitTable source{};
+  HopcroftFlatSplitTable target{};
+  HopcroftSplit split{};
+  std::vector<HopcroftSplit> newSplits{};
+};
+
+struct HopcroftLog {
+  FlatDfa source{};
+  FlatDfa target{};
+  std::vector<HopcroftSplitLog> hopcroftSplitLogs{};
+};
+
+class DfaLogger {
+ public:
+  HopcroftLog hopcroft_log{};
+
+  static DfaLogger &GetInstance() {
+    static DfaLogger dfa_logger{};
+    return dfa_logger;
+  }
+
+ private:
+  DfaLogger() = default;
+
+ public:
+  DfaLogger(const DfaLogger &) = delete;
+  DfaLogger(const DfaLogger &&) = delete;
+  DfaLogger &operator=(const DfaLogger &) = delete;
+
+  void ClearHopcroftLog() { hopcroft_log = {}; }
+};
 
 class Dfa {
  public:
   /**
    * DfaTable = map<u, map<t, v>>.
-   * For all u --t-> v, v must be DfaTable's key.
+   * Warning! For all u --t-> v, v must be DfaTable's key.
    */
   using TransTable = std::unordered_map<Terminal, StateId>;
   using DfaTable = std::unordered_map<StateId, TransTable>;
@@ -26,7 +90,35 @@ class Dfa {
 
  public:
   Dfa(DfaTable table, StateId s, States f)
-      : dfa_table_(std::move(table)), s_(s), f_(std::move(f)) {}
+      : dfa_table_(std::move(table)), s_(s), f_(std::move(f)) {
+    FixDfaTable();
+  }
+
+  explicit Dfa(const FlatDfa &flat_dfa) {
+    s_ = flat_dfa.s;
+    for (auto f : flat_dfa.f) {
+      f_.insert(f);
+    }
+    for (auto &[u, v, terminal] : flat_dfa.dfaTable.flatEdges) {
+      if (!dfa_table_.contains(u)) {
+        dfa_table_[u] = {};
+      }
+      dfa_table_[u][terminal] = v;
+    }
+    FixDfaTable();
+  }
+
+  /**
+   * Warning! For all u --t-> v, v must be DfaTable's key.
+   * Fix v is not in key.
+   */
+  void FixDfaTable() {
+    for (auto stateId : GetStates()) {
+      if (!dfa_table_.contains(stateId)) {
+        dfa_table_[stateId] = {};
+      }
+    }
+  }
 
   [[nodiscard]] const DfaTable &GetDfaTable() const { return dfa_table_; }
   [[nodiscard]] StateId GetS() const { return s_; }
@@ -51,9 +143,8 @@ class Dfa {
       TransTable new_trans_table;
 
       assert(dfa_table_.contains(old_id));
-      const TransTable &old_trans_table = dfa_table_.find(old_id)->second;
-
-      for (const auto &[terminal, next_id] : old_trans_table) {
+      for (const TransTable &old_trans_table = dfa_table_.find(old_id)->second;
+           const auto &[terminal, next_id] : old_trans_table) {
         if (!new_id_table.contains(next_id)) {
           new_id_table[next_id] = free_id;
           old_id_table[free_id] = next_id;
@@ -71,6 +162,24 @@ class Dfa {
     }
 
     return {dfa_table, new_id_table[s_], f};
+  }
+
+  [[nodiscard]] FlatDfa ToFlatDfa() const {
+    auto flatDfa = FlatDfa();
+    flatDfa.s = s_;
+    for (auto f : f_) {
+      flatDfa.f.emplace_back(f);
+    }
+    for (auto state : GetStates()) {
+      flatDfa.dfaTable.states.emplace_back(state);
+    }
+
+    for (auto &[u, transTable] : dfa_table_) {
+      for (auto &[terminal, v] : transTable) {
+        flatDfa.dfaTable.flatEdges.emplace_back(u, v, terminal);
+      }
+    }
+    return flatDfa;
   }
 
  private:
@@ -91,12 +200,24 @@ class Dfa {
    */
   using SplitTalbe = std::unordered_map<SplitId, Split>;
 
+#ifdef REGEX_FA_LOGGER
+  static HopcroftFlatSplitTable ToHopcroftFlatSplitTable(
+      const SplitTalbe &split_talbe) {
+    auto res = HopcroftFlatSplitTable{};
+    for (const auto &[split_id, split] : split_talbe) {
+      res.splits.emplace_back(split_id, split);
+    }
+    return res;
+  }
+#endif
+
   /**
    * Try to make new splits from split.
    * @param split_index_table
-   * @param split The split works on. Split should not be empty.
+   * @param split The split works on. Split must not be empty.
    * @param free_split_id SplitId free to use.
-   * @return Return new splits. If there is no new split, return split itself.
+   * @return Return new splits. If there is no new split, return split
+   * itself.
    */
   [[nodiscard]] SplitTalbe HopcroftSplit(
       const SplitIndexTable &split_index_table, const Split &split,
@@ -113,7 +234,7 @@ class Dfa {
       auto emptySplitId = std::optional<SplitId>{std::nullopt};
 
       for (const auto &u : split) {
-        auto trans_table = dfa_table_.at(u);
+        auto &trans_table = dfa_table_.at(u);
 
         // If goto v.
         if (trans_table.contains(terminal)) {
@@ -137,8 +258,14 @@ class Dfa {
 
       // Success
       if (curSplitTable.size() > 1) {
+#ifdef REGEX_FA_LOGGER
+        auto hopcroft_split_log = HopcroftSplitLog{};
+        hopcroft_split_log.splitTerminal = terminal;
+        DfaLogger::GetInstance().hopcroft_log.hopcroftSplitLogs.emplace_back(
+            hopcroft_split_log);
+#endif
         auto res = SplitTalbe{};
-        for (const auto &[split_id, newSplit] : curSplitTable) {
+        for (const auto &newSplit : curSplitTable | std::views::values) {
           res[free_split_id++] = newSplit;
         }
         return res;
@@ -152,6 +279,11 @@ class Dfa {
   }
 
   [[nodiscard]] Dfa Hopcroft() const {
+#ifdef REGEX_FA_LOGGER
+    DfaLogger::GetInstance().ClearHopcroftLog();
+    DfaLogger::GetInstance().hopcroft_log.source = ToFlatDfa();
+#endif
+
     auto split_table = SplitTalbe{};
     auto split_index_table = SplitIndexTable{};
     SplitId free_split_id{0};
@@ -184,11 +316,11 @@ class Dfa {
       work_queue.emplace(split);
     };
 
-    InsertSplit(final_states);
     InsertSplit(none_final_states);
+    InsertSplit(final_states);
 
     while (!work_queue.empty()) {
-      auto cur_split = work_queue.front();
+      auto cur_split = std::move(work_queue.front());
       work_queue.pop();
 
       // Split is not empty, use first state to find split_id.
@@ -206,15 +338,30 @@ class Dfa {
       if (new_split_table.size() == 1) {
         // Move to wait Queue. It may make new split when other new split occur.
         wait_queue.emplace(std::move(cur_split));
-        break;
+        continue;
       }
+
+#ifdef REGEX_FA_LOGGER
+      auto &hopcroft_split_log =
+          DfaLogger::GetInstance().hopcroft_log.hopcroftSplitLogs.back();
+      hopcroft_split_log.split = {cur_split_id, cur_split};
+      hopcroft_split_log.source = ToHopcroftFlatSplitTable(split_table);
+#endif
 
       // New split
       split_table.erase(cur_split_id);  // Remove old split.
       // Add new splits.
-      for (const auto &[split_id, new_split] : new_split_table) {
+      for (const auto &new_split : new_split_table | std::views::values) {
         InsertSplit(new_split);
+#ifdef REGEX_FA_LOGGER
+        hopcroft_split_log.newSplits.emplace_back(
+            split_index_table[*new_split.begin()], new_split);
+#endif
       }
+
+#ifdef REGEX_FA_LOGGER
+      hopcroft_split_log.target = ToHopcroftFlatSplitTable(split_table);
+#endif
 
       // When new split occurs, previous split may also be able to be split.
       while (!wait_queue.empty()) {
@@ -247,7 +394,11 @@ class Dfa {
       f.emplace(split_index_table[state_id]);
     }
 
-    return Dfa{dfa_table, s, f};
+    auto res = Dfa{dfa_table, s, f};
+#ifdef REGEX_FA_LOGGER
+    DfaLogger::GetInstance().hopcroft_log.target = res.ToFlatDfa();
+#endif
+    return res;
   }
 
   /**
@@ -256,8 +407,11 @@ class Dfa {
    */
   [[nodiscard]] States GetStates() const {
     auto res = States();
-    for (const auto &[state_id, _] : dfa_table_) {
-      res.emplace(state_id);
+    for (auto &[u, transTable] : dfa_table_) {
+      for (const auto &v : transTable | std::views::values) {
+        res.insert(u);
+        res.insert(v);
+      }
     }
     return res;
   }
@@ -269,7 +423,7 @@ class Dfa {
    */
   [[nodiscard]] Terminals GetTerminals(StateId state_id) const {
     auto res = Terminals{};
-    for (const auto &[terminal, _] : dfa_table_.at(state_id)) {
+    for (const auto &terminal : dfa_table_.at(state_id) | std::views::keys) {
       res.emplace(terminal);
     }
     return res;
@@ -290,12 +444,12 @@ class Dfa {
 
   /**
    * Get all terminals from dfa trans table.
-   * @param states
+   * @param trans_table
    * @return
    */
   [[nodiscard]] static Terminals GetTerminals(const TransTable &trans_table) {
     auto res = Terminals{};
-    for (const auto &[t, v] : trans_table) {
+    for (const auto &t : trans_table | std::views::keys) {
       res.emplace(t);
     }
     return res;
@@ -303,13 +457,13 @@ class Dfa {
 
   /**
    * Get all terminals from dfa table.
-   * @param states
+   * @param
    * @return
    */
   [[nodiscard]] Terminals GetTerminals() {
     auto res = Terminals{};
-    for (const auto &[u, trans_table] : dfa_table_) {
-      for (const auto &[t, v] : trans_table) {
+    for (const auto &trans_table : dfa_table_ | std::views::values) {
+      for (const auto &t : trans_table | std::views::keys) {
         res.emplace(t);
       }
     }

@@ -1,7 +1,9 @@
 #ifndef REGEX_FA_TEST_FA_INCLUDE_HPP
 #define REGEX_FA_TEST_FA_INCLUDE_HPP
 
+#include <cassert>
 #include <cstddef>
+#include <optional>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
