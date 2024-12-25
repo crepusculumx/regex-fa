@@ -100,9 +100,7 @@ class Dfa {
       f_.insert(f);
     }
     for (auto &[u, v, terminal] : flat_dfa.dfaTable.flatEdges) {
-      if (!dfa_table_.contains(u)) {
-        dfa_table_[u] = {};
-      }
+      dfa_table_.try_emplace(u);
       dfa_table_[u][terminal] = v;
     }
     FixDfaTable();
@@ -114,9 +112,7 @@ class Dfa {
    */
   void FixDfaTable() {
     for (auto stateId : GetStates()) {
-      if (!dfa_table_.contains(stateId)) {
-        dfa_table_[stateId] = {};
-      }
+      dfa_table_.try_emplace(stateId);
     }
   }
 
@@ -240,9 +236,7 @@ class Dfa {
         if (trans_table.contains(terminal)) {
           auto v = trans_table.at(terminal);
           auto vSplitId = split_index_table.at(v);
-          if (!curSplitTable.contains(vSplitId)) {
-            curSplitTable[vSplitId] = {};
-          }
+          curSplitTable.try_emplace(vSplitId);
           curSplitTable[vSplitId].emplace(u);
         }
         // If goto empty.
