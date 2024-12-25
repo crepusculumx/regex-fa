@@ -3,8 +3,11 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
 #include <optional>
 #include <queue>
+#include <ranges>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

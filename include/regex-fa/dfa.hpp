@@ -198,13 +198,13 @@ class Dfa {
   /**
    * For $key split, it contains $value states.
    */
-  using SplitTalbe = std::unordered_map<SplitId, Split>;
+  using SplitTable = std::unordered_map<SplitId, Split>;
 
 #ifdef REGEX_FA_LOGGER
   static HopcroftFlatSplitTable ToHopcroftFlatSplitTable(
-      const SplitTalbe &split_talbe) {
+      const SplitTable &split_table) {
     auto res = HopcroftFlatSplitTable{};
-    for (const auto &[split_id, split] : split_talbe) {
+    for (const auto &[split_id, split] : split_table) {
       res.splits.emplace_back(split_id, split);
     }
     return res;
@@ -219,7 +219,7 @@ class Dfa {
    * @return Return new splits. If there is no new split, return split
    * itself.
    */
-  [[nodiscard]] SplitTalbe HopcroftSplit(
+  [[nodiscard]] SplitTable HopcroftSplit(
       const SplitIndexTable &split_index_table, const Split &split,
       SplitId &free_split_id) const {
     // Get terminals used by current split.
@@ -227,7 +227,7 @@ class Dfa {
 
     // For each terminal, see if it can make new split.
     for (const auto &terminal : terminals) {
-      auto curSplitTable = SplitTalbe{};
+      auto curSplitTable = SplitTable{};
 
       // For u --t-> u, u may goto empty.
       // Goto empty is different from goto v, which will need a split_id.
@@ -264,7 +264,7 @@ class Dfa {
         DfaLogger::GetInstance().hopcroft_log.hopcroftSplitLogs.emplace_back(
             hopcroft_split_log);
 #endif
-        auto res = SplitTalbe{};
+        auto res = SplitTable{};
         for (const auto &newSplit : curSplitTable | std::views::values) {
           res[free_split_id++] = newSplit;
         }
@@ -273,7 +273,7 @@ class Dfa {
     }
 
     // Return split itself if there is no new split.
-    auto res = SplitTalbe{};
+    auto res = SplitTable{};
     res.emplace(split_index_table.at(*split.begin()), split);
     return res;
   }
@@ -284,7 +284,7 @@ class Dfa {
     DfaLogger::GetInstance().hopcroft_log.source = ToFlatDfa();
 #endif
 
-    auto split_table = SplitTalbe{};
+    auto split_table = SplitTable{};
     auto split_index_table = SplitIndexTable{};
     SplitId free_split_id{0};
 

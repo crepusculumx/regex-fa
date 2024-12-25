@@ -9,11 +9,12 @@ using FaUnweightedGraph = std::unordered_map<StateId, States>;
 
 /**
  * Get Reachable states from graph start at s.
- * @param graph Graph's $key must contains all stateId.
- * @param s Set of starting points.
+ * @param graph Graph's $key must contain all stateId.
+ * @param start Set of starting points.
  * @return Reachable states
  */
-States GetReachable(const FaUnweightedGraph &graph, const States &start) {
+inline States GetReachable(const FaUnweightedGraph &graph,
+                           const States &start) {
   auto res = States{};
 
   auto q = std::queue<StateId>{};
