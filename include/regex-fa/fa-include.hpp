@@ -19,6 +19,9 @@ using Terminals = std::unordered_set<Terminal>;
 
 using StateId = size_t;
 using States = std::unordered_set<StateId>;
+using OrderedStates = std::set<StateId>;
+
+using FlatStates = std::vector<StateId>;
 }  // namespace regex_fa
 
 #endif  // REGEX_FA_TEST_FA_INCLUDE_HPP
