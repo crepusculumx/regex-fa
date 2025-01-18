@@ -11,13 +11,9 @@ struct FlatEdge {
   Terminal terminal{};
 };
 
-struct FlatDfaTable {
+struct FlatDfa {
   std::vector<StateId> states{};
   std::vector<FlatEdge> flatEdges{};
-};
-
-struct FlatDfa {
-  FlatDfaTable dfaTable{};
   StateId s{};
   std::vector<StateId> f{};
 };
@@ -99,7 +95,7 @@ class Dfa {
     for (auto f : flat_dfa.f) {
       f_.insert(f);
     }
-    for (auto &[u, v, terminal] : flat_dfa.dfaTable.flatEdges) {
+    for (auto &[u, v, terminal] : flat_dfa.flatEdges) {
       dfa_table_.try_emplace(u);
       dfa_table_[u][terminal] = v;
     }
@@ -167,12 +163,12 @@ class Dfa {
       flatDfa.f.emplace_back(f);
     }
     for (auto state : GetStates()) {
-      flatDfa.dfaTable.states.emplace_back(state);
+      flatDfa.states.emplace_back(state);
     }
 
     for (auto &[u, transTable] : dfa_table_) {
       for (auto &[terminal, v] : transTable) {
-        flatDfa.dfaTable.flatEdges.emplace_back(u, v, terminal);
+        flatDfa.flatEdges.emplace_back(u, v, terminal);
       }
     }
     return flatDfa;

@@ -22,21 +22,16 @@ inline void from_json(const json& j, FlatEdge& data) {
   j.at("terminal").get_to(data.terminal);
 }
 
-inline void to_json(json& j, const FlatDfaTable& data) {
-  j = json{{"states", data.states}, {"flatEdges", data.flatEdges}};
-}
-
-inline void from_json(const json& j, FlatDfaTable& data) {
-  j.at("states").get_to(data.states);
-  j.at("flatEdges").get_to(data.flatEdges);
-}
-
 inline void to_json(json& j, const FlatDfa& data) {
-  j = json{{"dfaTable", data.dfaTable}, {"s", data.s}, {"f", data.f}};
+  j = json{{"states", data.states},
+           {"flatEdges", data.flatEdges},
+           {"s", data.s},
+           {"f", data.f}};
 }
 
 inline void from_json(const json& j, FlatDfa& data) {
-  j.at("dfaTable").get_to(data.dfaTable);
+  j.at("states").get_to(data.states);
+  j.at("flatEdges").get_to(data.flatEdges);
   j.at("s").get_to(data.s);
   j.at("f").get_to(data.f);
 }
