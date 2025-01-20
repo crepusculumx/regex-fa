@@ -1,6 +1,7 @@
 #ifndef REGEX_FA_TEST_FA_INCLUDE_HPP
 #define REGEX_FA_TEST_FA_INCLUDE_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -22,6 +23,18 @@ using States = std::unordered_set<StateId>;
 using OrderedStates = std::set<StateId>;
 
 using FlatStates = std::vector<StateId>;
+
+template <typename States>
+  requires std::ranges::range<States>
+FlatStates toFlatStates(const States &states) {
+  auto res = FlatStates{};
+  for (unsigned long state : states) {
+    res.emplace_back(state);
+  }
+  std::ranges::sort(res);
+  return res;
+}
+
 }  // namespace regex_fa
 
 #endif  // REGEX_FA_TEST_FA_INCLUDE_HPP

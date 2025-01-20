@@ -2,6 +2,7 @@
 
 #include "nlohmann/json.hpp"
 #include "wasm-export/dfa-export.hpp"
+#include "wasm-export/nfa-export.hpp"
 
 using namespace regex_fa;
 using json = nlohmann::json;
@@ -16,7 +17,7 @@ char* LibCall(const char* funcName, const char* args) {
   using LibFunc = std::function<std::string(const std::string&)>;
 
   auto funcTable = std::unordered_map<std::string, LibFunc>{
-      {"DfaMinimize", LibFunc{DfaMinmize}}};
+      {"DfaMinimize", LibFunc{DfaMinimize}}, {"NfaToDfa", LibFunc{NFaToDfa}}};
 
   const auto res = funcTable[funcNameStr](argsStr);
 

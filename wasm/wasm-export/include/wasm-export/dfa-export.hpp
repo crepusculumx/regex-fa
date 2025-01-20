@@ -1,14 +1,9 @@
-#ifndef FA_WASM_DFA_EXPORT_HPP
-#define FA_WASM_DFA_EXPORT_HPP
+#ifndef WASM_EXPORT_DFA_EXPORT_HPP
+#define WASM_EXPORT_DFA_EXPORT_HPP
 
-#include <string>
-
-#include "nlohmann/json.hpp"
-#include "regex-fa/regex-fa.hpp"
+#include "wasm-export-include.hpp"
 
 namespace regex_fa {
-
-using json = nlohmann::json;
 
 inline void to_json(json& j, const FlatEdge& data) {
   j = json{{"source", data.source},
@@ -87,17 +82,15 @@ inline void from_json(const json& j, HopcroftLog& data) {
   j.at("hopcroftSplitLogs").get_to(data.hopcroftSplitLogs);
 }
 
-inline std::string DfaMinmize(const std::string& args) {
+inline std::string DfaMinimize(const std::string& args) {
   const auto json_args = json::parse(args);
   const auto flatDfa = json_args.get<FlatDfa>();
   const auto dfa = Dfa{flatDfa};
   const auto res_dfa = dfa.Minimize();
-  // const json res_json = res_dfa.ToFlatDfa();
-  const auto t = DfaLogger::GetInstance().hopcroft_log;
   const json res_json = DfaLogger::GetInstance().hopcroft_log;
   return res_json.dump();
 }
 
 }  // namespace regex_fa
 
-#endif  // FA_WASM_DFA_EXPORT_HPP
+#endif  // WASM_EXPORT_DFA_EXPORT_HPP
